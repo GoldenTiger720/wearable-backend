@@ -263,3 +263,24 @@ class ProcessingConfig(BaseModel):
     update_interval_ms: int = 50
     noise_threshold: float = 0.3
     quality_threshold: float = 0.7
+
+
+# ============================================================================
+# DEMO LAYER RESPONSE MODEL
+# ============================================================================
+
+class LayerStep(BaseModel):
+    description: str
+    layer: Optional[str] = None
+    input: Optional[Any] = None
+    output: Optional[Any] = None
+    data: Optional[Any] = None
+    timestamp: Optional[str] = None
+    processing_details: Optional[Dict[str, Any]] = None
+
+
+class LayerDemoResponse(BaseModel):
+    demonstration: str
+    total_layers: int
+    processing_pipeline: Dict[str, LayerStep]
+    summary: Dict[str, Any]

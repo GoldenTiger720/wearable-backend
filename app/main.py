@@ -24,7 +24,8 @@ from app.models.schemas import (
     TimesystemsLayerResult, LIAInsights, QualityMetrics,
     FrequencyBands, HRVFeatures, PatternRecognition,
     CircadianAlignment, WellnessAssessment, SignalQuality,
-    PatternType, CircadianPhase, RhythmClassification
+    PatternType, CircadianPhase, RhythmClassification,
+    LayerDemoResponse
 )
 from app.services.ble_simulator import BLESimulator
 from app.services.timesystems import TimesystemsLayer
@@ -536,11 +537,74 @@ async def websocket_stream(websocket: WebSocket):
 # DEMONSTRATION ENDPOINTS
 # ============================================================================
 
-@app.get("/api/v1/demo/layers", tags=["Demo"])
+@app.get("/api/v1/demo/layers", tags=["Demo"], response_model=LayerDemoResponse)
 async def demonstrate_layers():
     """
     Demonstration endpoint showing how data flows through all layers
-    Returns detailed processing information for each layer
+
+    Returns detailed processing information for each layer:
+    - **step_1_raw_data**: Raw biosignal data from BLE simulator
+    - **step_2_clarity_layer**: Clarity™ signal quality assessment
+    - **step_3_ifrs_layer**: iFRS™ frequency response analysis
+    - **step_4_timesystems_layer**: Timesystems™ temporal pattern analysis
+    - **step_5_lia_integration**: LIA AI-powered health insights
+
+    Example response structure:
+    ```json
+    {
+      "demonstration": "Complete data flow through all proprietary layers",
+      "total_layers": 4,
+      "processing_pipeline": {
+        "step_1_raw_data": {
+          "description": "Raw biosignal data from BLE device simulation",
+          "data": {
+            "heart_rate": 75.0,
+            "spo2": 98.0,
+            "temperature": 36.8,
+            "activity": 25.0
+          }
+        },
+        "step_2_clarity_layer": {
+          "description": "Clarity™: Signal quality assessment and noise reduction",
+          "layer": "Clarity™",
+          "output": {
+            "quality_score": 0.86,
+            "signal_to_noise_ratio": 35.0,
+            "quality_assessment": "excellent"
+          }
+        },
+        "step_3_ifrs_layer": {
+          "description": "iFRS™: Intelligent Frequency Response System",
+          "layer": "iFRS™",
+          "output": {
+            "dominant_frequency": 1.25,
+            "rhythm_classification": "normal_sinus",
+            "hrv_score": 75.0
+          }
+        },
+        "step_4_timesystems_layer": {
+          "description": "Timesystems™: Temporal pattern analysis",
+          "layer": "Timesystems™",
+          "output": {
+            "pattern_type": "stable",
+            "circadian_phase": "afternoon"
+          }
+        },
+        "step_5_lia_integration": {
+          "description": "LIA: AI-powered health insights",
+          "layer": "LIA Engine",
+          "output": {
+            "condition": "Normal Resting",
+            "confidence": 0.85,
+            "wellness_score": 79.0
+          }
+        }
+      },
+      "summary": {
+        "layers_applied": ["Clarity™", "iFRS™", "Timesystems™", "LIA"]
+      }
+    }
+    ```
     """
     try:
         # Get raw data
