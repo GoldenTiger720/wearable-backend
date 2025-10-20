@@ -12,7 +12,24 @@ FastAPI-based backend for processing biosignals through proprietary Reconnect la
 pip install -r requirements.txt
 ```
 
-#### 2. Run the Server
+#### 2. Set up Database (First Time Only)
+
+The project uses PostgreSQL for data persistence. Database is already configured and migrated.
+
+```bash
+# Verify database connection
+python3 -c "from app.database import test_connection; test_connection()"
+
+# Verify tables (optional)
+python3 verify_database.py
+
+# Test database operations (optional)
+python3 test_database.py
+```
+
+See [DATABASE_SETUP.md](DATABASE_SETUP.md) for detailed information.
+
+#### 3. Run the Server
 
 From the project root:
 
@@ -26,13 +43,13 @@ Or using the Python module directly:
 python3 -m app.main
 ```
 
-### 3. Access the API
+### 4. Access the API
 
 - **API Base**: http://localhost:8000
 - **Swagger UI** (Interactive Docs): http://localhost:8000/docs
 - **ReDoc**: http://localhost:8000/redoc
 
-### 3. Run Demo Client
+### 5. Run Demo Client
 
 ```bash
 python3 app/demo_client.py
