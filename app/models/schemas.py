@@ -284,3 +284,31 @@ class LayerDemoResponse(BaseModel):
     total_layers: int
     processing_pipeline: Dict[str, LayerStep]
     summary: Dict[str, Any]
+
+
+# ============================================================================
+# LOGS RESPONSE MODEL
+# ============================================================================
+
+class ProcessingLogEntry(BaseModel):
+    timestamp: str
+    level: str
+    message: str
+    data: Dict[str, Any] = {}
+
+
+class ProcessingLogsResponse(BaseModel):
+    total: int = Field(..., description="Total number of log entries returned")
+    logs: List[ProcessingLogEntry] = Field(..., description="List of processing log entries")
+
+
+# ============================================================================
+# ROOT ENDPOINT RESPONSE MODEL
+# ============================================================================
+
+class APIInfo(BaseModel):
+    service: str = Field(..., description="Service name")
+    version: str = Field(..., description="API version")
+    status: str = Field(..., description="Operational status")
+    features: List[str] = Field(..., description="Available features")
+    endpoints: Dict[str, str] = Field(..., description="Key API endpoints")

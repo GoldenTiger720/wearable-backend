@@ -25,7 +25,7 @@ from app.models.schemas import (
     FrequencyBands, HRVFeatures, PatternRecognition,
     CircadianAlignment, WellnessAssessment, SignalQuality,
     PatternType, CircadianPhase, RhythmClassification,
-    LayerDemoResponse
+    LayerDemoResponse, ProcessingLogsResponse, APIInfo
 )
 from app.services.ble_simulator import BLESimulator
 from app.services.timesystems import TimesystemsLayer
@@ -265,9 +265,22 @@ def generate_mockup_stream_data() -> StreamDataResponse:
 # REST API ENDPOINTS
 # ============================================================================
 
-@app.get("/", tags=["System"])
+@app.get("/", tags=["System"], response_model=APIInfo)
 async def root():
-    """Root endpoint with API information"""
+    """
+    Root endpoint with API information
+
+    Returns basic information about the Wearable Biosignal Analysis API including:
+    - Service name and version
+    - Operational status
+    - Available features (4-layer processing pipeline)
+    - Key API endpoints
+
+    This is useful for:
+    - API discovery
+    - Health monitoring
+    - Quick reference to available endpoints
+    """
     return {
         "service": "Wearable Biosignal Analysis API",
         "version": "1.0.0",
@@ -480,11 +493,58 @@ async def get_session(session_id: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.get("/api/v1/logs/processing", tags=["Logs"])
+@app.get("/api/v1/logs/processing", tags=["Logs"], response_model=ProcessingLogsResponse)
 async def get_processing_logs(limit: int = 100):
     """
     Get recent processing logs showing layer activity
-    Useful for demonstrating how each layer processes data
+
+    Returns log entries from the 4-layer processing pipeline:
+    - **CLARITY_LAYER**: Signal quality metrics
+    - **IFRS_LAYER**: Frequency analysis and HRV
+    - **TIMESYSTEMS_LAYER**: Temporal patterns and circadian phase
+    - **LIA_ENGINE**: AI health condition predictions
+
+    **Parameters:**
+    - `limit`: Maximum number of log entries to return (default: 100)
+
+    **Example Response:**
+    ```json
+    {
+      "total": 10,
+      "logs": [
+        {
+          "timestamp": "2025-10-20T15:03:56.050447",
+          "level": "INFO",
+          "message": "CLARITY_LAYER | quality=0.90 | snr=35.0dB | noise_reduced=False",
+          "data": {}
+        },
+        {
+          "timestamp": "2025-10-20T15:03:56.088627",
+          "level": "INFO",
+          "message": "IFRS_LAYER | dominant_freq=1.25Hz | heart_rate_variability=75.0 | rhythm=normal_sinus",
+          "data": {}
+        },
+        {
+          "timestamp": "2025-10-20T15:03:56.088719",
+          "level": "INFO",
+          "message": "TIMESYSTEMS_LAYER | pattern=stable | circadian_phase=afternoon | temporal_consistency=0.75",
+          "data": {}
+        },
+        {
+          "timestamp": "2025-10-20T15:03:56.088949",
+          "level": "INFO",
+          "message": "LIA_ENGINE | condition=Normal Resting | confidence=0.735 | wellness_score=84.3",
+          "data": {}
+        }
+      ]
+    }
+    ```
+
+    Useful for:
+    - Debugging layer processing
+    - Monitoring system activity
+    - Understanding data flow through the pipeline
+    - Verifying layer outputs
     """
     try:
         logs = processing_logger.get_recent_logs(limit)
