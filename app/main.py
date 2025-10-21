@@ -25,13 +25,15 @@ from app.models.schemas import (
     FrequencyBands, HRVFeatures, PatternRecognition,
     CircadianAlignment, WellnessAssessment, SignalQuality,
     PatternType, CircadianPhase, RhythmClassification,
-    LayerDemoResponse, ProcessingLogsResponse, APIInfo
+    LayerDemoResponse, ProcessingLogsResponse, APIInfo,
+    ChatRequest, ChatResponse, ConversationHistoryResponse
 )
 from app.services.ble_simulator import BLESimulator
 from app.services.timesystems import TimesystemsLayer
 from app.services.ifrs import iFRSLayer
 from app.services.clarity import ClarityLayer
 from app.services.lia_integration import LIAEngine
+from app.services.lia_chat import LIAChatEngine
 from app.services.session_manager import SessionManager
 from app.utils.logger import setup_logger, get_processing_logger
 
@@ -45,6 +47,7 @@ timesystems = None
 ifrs = None
 clarity = None
 lia_engine = None
+lia_chat = None
 session_manager = None
 connected_clients = []
 
@@ -52,7 +55,7 @@ connected_clients = []
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Lifespan context manager for startup and shutdown"""
-    global ble_simulator, timesystems, ifrs, clarity, lia_engine, session_manager
+    global ble_simulator, timesystems, ifrs, clarity, lia_engine, lia_chat, session_manager
 
     logger.info("🚀 Starting Wearable Biosignal Analysis Backend...")
 
@@ -63,6 +66,15 @@ async def lifespan(app: FastAPI):
     clarity = ClarityLayer()
     lia_engine = LIAEngine()
     session_manager = SessionManager()
+
+    # Initialize LIA Chat Engine
+    try:
+        lia_chat = LIAChatEngine()
+        logger.info("✓ LIA Core™ Chat Engine initialized with OpenAI")
+    except Exception as e:
+        logger.warning(f"⚠️ LIA Chat Engine initialization failed: {str(e)}")
+        logger.warning("⚠️ Chat functionality will be unavailable")
+        lia_chat = None
 
     # Start BLE simulator
     await ble_simulator.start()
@@ -290,14 +302,16 @@ async def root():
             "Timesystems™ Temporal Analysis",
             "iFRS™ Frequency Response",
             "Clarity™ Signal Quality",
-            "LIA Integration"
+            "LIA Integration",
+            "LIA Core™ Conversational AI (OpenAI-powered)"
         ],
         "endpoints": {
             "docs": "/docs",
             "health": "/api/v1/health",
             "connect": "/api/v1/connect",
             "stream": "/api/v1/stream",
-            "websocket": "/ws/stream"
+            "websocket": "/ws/stream",
+            "chat": "/api/v1/chat"
         }
     }
 
@@ -759,6 +773,157 @@ async def demonstrate_layers():
 
     except Exception as e:
         logger.error(f"❌ Demonstration error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============================================================================
+# LIA CORE™ CONVERSATIONAL MODULE ENDPOINTS
+# ============================================================================
+
+@app.post("/api/v1/chat", tags=["LIA Chat"], response_model=ChatResponse)
+async def chat_with_lia(request: ChatRequest):
+    """
+    Chat with LIA Core™ - Natural Language Interface
+
+    Engage in a conversational interaction with LIA, the AI health assistant.
+    LIA has access to your real-time biosignal data and can:
+    - Answer questions about your current health status
+    - Explain biosignal metrics and their meaning
+    - Provide personalized health insights and recommendations
+    - Analyze trends and patterns in your data
+    - Offer wellness coaching and advice
+
+    **Parameters:**
+    - `message`: Your question or message to LIA
+    - `session_id`: Optional session ID to maintain conversation context (default: "default")
+    - `include_biosignal_context`: Whether to include current biosignal data (default: true)
+
+    **Example Request:**
+    ```json
+    {
+      "message": "How is my heart rate variability?",
+      "session_id": "user_123",
+      "include_biosignal_context": true
+    }
+    ```
+
+    **Example Response:**
+    ```json
+    {
+      "success": true,
+      "response": "Your heart rate variability (HRV) is looking excellent! Your HRV score is 75.0/100...",
+      "timestamp": "2025-10-21T12:30:45.123456",
+      "session_id": "user_123",
+      "tokens_used": 245,
+      "model": "gpt-4o-mini"
+    }
+    ```
+
+    The conversation maintains context across multiple messages within the same session.
+    """
+    try:
+        # Check if LIA Chat is available
+        if lia_chat is None:
+            raise HTTPException(
+                status_code=503,
+                detail="LIA Chat Engine is not available. Please check OpenAI API key configuration."
+            )
+
+        # Get current biosignal data if context is requested
+        stream_data = None
+        if request.include_biosignal_context:
+            try:
+                stream_data = await get_stream_data()
+            except Exception as e:
+                logger.warning(f"Could not fetch biosignal data for context: {str(e)}")
+
+        # Process chat request
+        result = lia_chat.chat(
+            user_message=request.message,
+            stream_data=stream_data,
+            session_id=request.session_id,
+            include_context=request.include_biosignal_context
+        )
+
+        # Log the interaction
+        processing_logger.info(
+            f"LIA_CHAT | session={request.session_id} | "
+            f"message_length={len(request.message)} | "
+            f"success={result['success']}"
+        )
+
+        return ChatResponse(**result)
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"❌ Chat error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/v1/chat/history/{session_id}", tags=["LIA Chat"], response_model=ConversationHistoryResponse)
+async def get_chat_history(session_id: str):
+    """
+    Get conversation history for a session
+
+    Retrieves the conversation history between the user and LIA for a specific session.
+
+    **Parameters:**
+    - `session_id`: The session identifier
+
+    **Returns:**
+    - Conversation history with all messages exchanged in the session
+    """
+    try:
+        if lia_chat is None:
+            raise HTTPException(
+                status_code=503,
+                detail="LIA Chat Engine is not available"
+            )
+
+        history = lia_chat.get_conversation_history(session_id)
+
+        return ConversationHistoryResponse(
+            session_id=session_id,
+            history=history,
+            message_count=len(history)
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"❌ History retrieval error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.delete("/api/v1/chat/history/{session_id}", tags=["LIA Chat"])
+async def clear_chat_history(session_id: str):
+    """
+    Clear conversation history for a session
+
+    Deletes all conversation history for the specified session, starting fresh.
+
+    **Parameters:**
+    - `session_id`: The session identifier
+    """
+    try:
+        if lia_chat is None:
+            raise HTTPException(
+                status_code=503,
+                detail="LIA Chat Engine is not available"
+            )
+
+        lia_chat.clear_history(session_id)
+
+        return {
+            "success": True,
+            "message": f"Conversation history cleared for session: {session_id}"
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"❌ History clear error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

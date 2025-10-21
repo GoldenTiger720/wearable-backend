@@ -312,3 +312,29 @@ class APIInfo(BaseModel):
     status: str = Field(..., description="Operational status")
     features: List[str] = Field(..., description="Available features")
     endpoints: Dict[str, str] = Field(..., description="Key API endpoints")
+
+
+# ============================================================================
+# LIA CHAT REQUEST/RESPONSE MODELS
+# ============================================================================
+
+class ChatRequest(BaseModel):
+    message: str = Field(..., description="User's message to LIA", min_length=1)
+    session_id: Optional[str] = Field("default", description="Conversation session ID")
+    include_biosignal_context: bool = Field(True, description="Include current biosignal data in context")
+
+
+class ChatResponse(BaseModel):
+    success: bool = Field(..., description="Whether the chat request was successful")
+    response: str = Field(..., description="LIA's response message")
+    timestamp: str = Field(..., description="Response timestamp")
+    session_id: str = Field(..., description="Conversation session ID")
+    tokens_used: Optional[int] = Field(None, description="Number of tokens used")
+    model: Optional[str] = Field(None, description="AI model used")
+    error: Optional[str] = Field(None, description="Error message if failed")
+
+
+class ConversationHistoryResponse(BaseModel):
+    session_id: str = Field(..., description="Conversation session ID")
+    history: List[Dict[str, str]] = Field(..., description="Conversation history")
+    message_count: int = Field(..., description="Number of messages in history")
